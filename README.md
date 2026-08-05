@@ -47,19 +47,19 @@ This project was developed against the AAIR Labs Developer Exercise requirements
 > These are captures of the actual app build running on a device/emulator.
 
 ### Task List Screen — Empty State
-![Empty State](screenshots/task-list-empty.jpg)
+![Empty State](screenshots/task-list-empty.jpeg)
 
 ### Task List Screen — With a Mix of Completed and Incomplete Tasks
-![Task List](screenshots/task-list-with-tasks.jpg)
+![Task List](screenshots/task-list-with-tasks.jpeg)
 
 ### Add Task Screen
-![Add Task](screenshots/add-task-screen.jpg)
+![Add Task](screenshots/add-task-screen.jpeg)
 
 ### Voice Input Mode (FAB Active / Listening)
-![Voice Input](screenshots/voice-input.jpg)
+![Voice Input](screenshots/voice-input.jpeg)
 
 ### Dark Theme
-![Dark Theme](screenshots/dark-theme.jpg)
+![Dark Theme](screenshots/dark-theme.jpeg)
 
 ---
 
