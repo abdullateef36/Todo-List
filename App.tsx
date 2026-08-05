@@ -12,12 +12,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider, useThemeContext } from './context/ThemeContext';
 import { TaskListScreen } from './screens/TaskListScreen';
 import { AddTaskScreen } from './screens/AddTaskScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
 
 export type RootStackParamList = {
   TaskList: undefined;
   AddTask: { taskId?: string };
-  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -54,7 +52,6 @@ const AppNavigator: React.FC = () => {
         >
           <Stack.Screen name="TaskList" component={TaskListScreen} />
           <Stack.Screen name="AddTask" component={AddTaskScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

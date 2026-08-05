@@ -82,11 +82,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
             {showSpinner ? (
               <ActivityIndicator
                 size="large"
-                color={
-                  voiceState === 'error'
-                    ? theme.colors.danger
-                    : theme.colors.primary
-                }
+                color={theme.colors.primary}
                 style={styles.spinner}
               />
             ) : null}

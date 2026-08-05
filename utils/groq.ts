@@ -1,9 +1,20 @@
 /**
- * OpenAI API utilities for speech-to-text transcription.
+ * Groq API utilities for speech-to-text transcription.
+ *
+ * Groq serves OpenAI-compatible endpoints with a free tier (no credit card).
+ * Registry: https://console.groq.com/docs/speech-to-text
  */
 import * as FileSystem from 'expo-file-system';
 
-const WHISPER_ENDPOINT = 'https://api.openai.com/v1/audio/transcriptions';
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+const WHISPER_ENDPOINT = `${GROQ_BASE_URL}/audio/transcriptions`;
+const CHAT_ENDPOINT = `${GROQ_BASE_URL}/chat/completions`;
+
+// Model used for speech-to-text (Whisper on Groq's free tier).
+const STT_MODEL = 'whisper-large-v3-turbo';
+
+// Model used for splitting natural language into separate tasks.
+const SPLIT_MODEL = 'llama-3.1-8b-instant';
 
 export interface TranscriptionResult {
   text: string;
@@ -12,10 +23,10 @@ export interface TranscriptionResult {
 }
 
 /**
- * Transcribes an audio file using OpenAI's Whisper API.
+ * Transcribes an audio file using Groq's Whisper API.
  *
  * @param audioUri - Local file URI of the recorded audio
- * @param apiKey - OpenAI API key
+ * @param apiKey - Groq API key (starts with "gsk_")
  * @returns Transcription result with text or error
  */
 export const transcribeAudio = async (
@@ -23,7 +34,7 @@ export const transcribeAudio = async (
   apiKey: string
 ): Promise<TranscriptionResult> => {
   try {
-    // Read the audio file as base64
+    // Read the audio file as base64 (unused fallback check for existence)
     const fileInfo = await FileSystem.getInfoAsync(audioUri);
     if (!fileInfo.exists) {
       return { text: '', success: false, error: 'Audio file not found' };
@@ -37,7 +48,7 @@ export const transcribeAudio = async (
       type: 'audio/m4a',
       name: 'recording.m4a',
     });
-    formData.append('model', 'whisper-1');
+    formData.append('model', STT_MODEL);
 
     const response = await fetch(WHISPER_ENDPOINT, {
       method: 'POST',
@@ -62,11 +73,12 @@ export const transcribeAudio = async (
 };
 
 /**
- * Uses GPT to intelligently split a transcribed text into separate task titles.
- * This is more accurate than heuristic splitting for complex natural language.
+ * Uses Groq (Llama) to intelligently split a transcribed text into separate
+ * task titles. This is more accurate than heuristic splitting for complex
+ * natural language.
  *
  * @param text - The transcribed text
- * @param apiKey - OpenAI API key
+ * @param apiKey - Groq API key (starts with "gsk_")
  * @returns Array of task titles
  */
 export const splitTextWithGPT = async (
@@ -74,14 +86,14 @@ export const splitTextWithGPT = async (
   apiKey: string
 ): Promise<string[]> => {
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(CHAT_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: SPLIT_MODEL,
         messages: [
           {
             role: 'system',

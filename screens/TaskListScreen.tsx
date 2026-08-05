@@ -191,16 +191,8 @@ export const TaskListScreen: React.FC<TaskListScreenProps> = ({ navigation }) =>
         <View style={styles.headerButtons}>
           <ThemeToggle theme={theme} mode={mode} onToggle={toggleTheme} />
           <TouchableOpacity
-            style={[styles.settingsButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('Settings')}
-            activeOpacity={0.7}
-            hitSlop={10}
-          >
-            <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>⚙</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => navigation.navigate('AddTask')}
+            onPress={() => navigation.navigate('AddTask', {})}
             activeOpacity={0.8}
           >
             <Text
@@ -320,14 +312,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  settingsButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
   },
   settingsText: {
     fontSize: 18,

@@ -7,7 +7,6 @@ import { ThemeMode } from '../constants/theme';
 
 const TASKS_KEY = '@tasks';
 const THEME_KEY = '@theme';
-const API_KEY_KEY = '@openai_api_key';
 
 /**
  * Save the tasks array to AsyncStorage.
@@ -54,29 +53,6 @@ export const loadTheme = async (): Promise<ThemeMode | null> => {
     return await AsyncStorage.getItem(THEME_KEY) as ThemeMode | null;
   } catch (error) {
     console.error('Failed to load theme:', error);
-    return null;
-  }
-};
-
-/**
- * Save the OpenAI API key for voice transcription.
- */
-export const saveApiKey = async (apiKey: string): Promise<void> => {
-  try {
-    await AsyncStorage.setItem(API_KEY_KEY, apiKey);
-  } catch (error) {
-    console.error('Failed to save API key:', error);
-  }
-};
-
-/**
- * Load the OpenAI API key for voice transcription.
- */
-export const loadApiKey = async (): Promise<string | null> => {
-  try {
-    return await AsyncStorage.getItem(API_KEY_KEY);
-  } catch (error) {
-    console.error('Failed to load API key:', error);
     return null;
   }
 };

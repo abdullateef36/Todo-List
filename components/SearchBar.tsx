@@ -29,7 +29,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       ]}
     >
       <TextInput
-        style={[styles.input, { color: theme.colors.text, placeholderTextColor: theme.colors.placeholder }]}
+        style={[styles.input, { color: theme.colors.text }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

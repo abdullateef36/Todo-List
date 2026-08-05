@@ -1,13 +1,13 @@
 /**
  * Hook for voice input recording and transcription.
- * Records audio, transcribes via OpenAI Whisper API, and splits into tasks.
+ * Records audio, transcribes via the Groq (Whisper) API, and splits into tasks.
  */
 import { useState, useCallback, useRef } from 'react';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { transcribeAudio, splitTextWithGPT } from '../utils/openai';
+import { transcribeAudio, splitTextWithGPT } from '../utils/groq';
 import { splitTranscribedTextIntoTasks, cleanTaskTitle } from '../utils/voiceUtils';
-import { loadApiKey } from '../utils/storage';
+import { DEFAULT_GROQ_API_KEY } from '../constants/config';
 
 export type VoiceInputState =
   | 'idle'
@@ -64,7 +64,7 @@ export const useVoiceInput = () => {
 
       // Start recording
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsCreator.CAMERA_CODEC_PRESET_IOS_14_HIGH_QUALITY
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
 
       recordingRef.current = recording;
@@ -97,11 +97,11 @@ export const useVoiceInput = () => {
         throw new Error('Failed to get recording URI');
       }
 
-      // Get the API key
-      const apiKey = await loadApiKey();
+      // Use the built-in Groq API key (configured in constants/config.ts)
+      const apiKey = DEFAULT_GROQ_API_KEY;
       if (!apiKey) {
         throw new Error(
-          'OpenAI API key not found. Please add your API key in Settings.'
+          'Groq API key not found. Please add your API key in constants/config.ts.'
         );
       }
 

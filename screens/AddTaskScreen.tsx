@@ -173,7 +173,6 @@ export const AddTaskScreen: React.FC<AddTaskScreenProps> = ({
               onChangeText={setDueDate}
               placeholder="YYYY-MM-DD"
               placeholderTextColor={theme.colors.placeholder}
-              inputMode="date"
             />
             <TouchableOpacity
               style={[
