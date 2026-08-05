@@ -12,10 +12,7 @@
       "resizeMode": "contain"
     },
     "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "This app uses the microphone to record voice tasks and transcribe them into to-do items."
-      }
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -24,11 +21,19 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "permissions": ["RECORD_AUDIO"]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "This app uses the microphone to record voice tasks and transcribe them into to-do items."
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

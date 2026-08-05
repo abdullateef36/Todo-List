@@ -165,7 +165,7 @@ The voice input intelligently splits natural language into separate tasks:
 - **Expo** 57 — Development platform and tooling
 - **React Navigation** 7 — Navigation library
 - **AsyncStorage** — Local data persistence
-- **Expo AV** — Audio recording for voice input
+- **Expo Audio** — Audio recording for voice input
 - **Groq API** — Free Whisper (speech-to-text) and Llama (task splitting) models
 - **Jest / ts-jest** — Unit testing
 - **TypeScript** — Type safety

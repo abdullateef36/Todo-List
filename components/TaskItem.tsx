@@ -11,6 +11,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { Check, Calendar, AlertTriangle, Trash2 } from 'lucide-react-native';
 import { Task } from '../types/task';
 import { Theme } from '../constants/theme';
 import { formatDate, isOverdue } from '../utils/voiceUtils';
@@ -83,9 +84,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           ]}
         >
           {task.completed && (
-            <Text style={[styles.checkmark, { color: theme.colors.primaryText }]}>
-              ✓
-            </Text>
+            <Check color={theme.colors.primaryText} size={16} strokeWidth={2.5} />
           )}
         </Animated.View>
 
@@ -114,7 +113,12 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             </Text>
           ) : null}
           {task.dueDate ? (
-            <View style={styles.dueDateContainer}>
+            <View style={[styles.dueDateContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+              {overdue ? (
+                <AlertTriangle color={theme.colors.danger} size={12} />
+              ) : (
+                <Calendar color={theme.colors.textSecondary} size={12} />
+              )}
               <Text
                 style={[
                   styles.dueDate,
@@ -123,10 +127,10 @@ export const TaskItem: React.FC<TaskItemProps> = ({
                       ? theme.colors.danger
                       : theme.colors.textSecondary,
                     fontWeight: overdue ? 'bold' : 'normal',
+                    marginLeft: 4,
                   },
                 ]}
               >
-                {overdue ? '⚠ Overdue: ' : '📅 '}
                 {formatDate(new Date(task.dueDate))}
               </Text>
             </View>
@@ -140,9 +144,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         activeOpacity={0.7}
         hitSlop={10}
       >
-        <Text style={[styles.deleteText, { color: theme.colors.danger }]}>
-          ✕
-        </Text>
+        <Trash2 color={theme.colors.danger} size={18} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -177,8 +179,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkmark: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textContainer: {
     flex: 1,
@@ -200,9 +202,5 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 8,
     marginLeft: 8,
-  },
-  deleteText: {
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

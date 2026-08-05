@@ -1,6 +1,7 @@
 /**
  * AddTaskScreen — form for adding a new task or editing an existing one.
- * Supports title, optional description, and optional due date.
+ * Supports title, optional description, and an optional due date picked via
+ * the native system date picker (@react-native-community/datetimepicker).
  */
 import React, { useState, useCallback, useEffect } from 'react';
 import {
@@ -14,11 +15,13 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar } from 'lucide-react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
-import { useTasks } from '../hooks/useTasks';
+import { useTasksContext } from '../context/TaskContext';
 import { useThemeContext } from '../context/ThemeContext';
-import { Task } from '../types/task';
+import { formatDate } from '../utils/voiceUtils';
 
 type AddTaskScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -36,14 +39,15 @@ export const AddTaskScreen: React.FC<AddTaskScreenProps> = ({
   navigation,
   route,
 }) => {
-  const { tasks, addTask, updateTask, isLoading } = useTasks();
+  const { tasks, addTask, updateTask, isLoading } = useTasksContext();
   const { theme } = useThemeContext();
   const taskId = route.params?.taskId;
   const isEditing = !!taskId;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Load task if editing
   useEffect(() => {
@@ -52,7 +56,7 @@ export const AddTaskScreen: React.FC<AddTaskScreenProps> = ({
       if (task) {
         setTitle(task.title);
         setDescription(task.description || '');
-        setDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
+        setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
       } else if (!isLoading) {
         // Task not found — treat as new
         navigation.goBack();
@@ -67,9 +71,18 @@ export const AddTaskScreen: React.FC<AddTaskScreenProps> = ({
       return;
     }
 
+    // Store the due date as the end of the chosen day (so it is not overdue
+    // until that date has fully passed).
     const isoDueDate = dueDate
-      ? new Date(dueDate).toISOString().split('T')[0] +
-        'T23:59:59.999Z'
+      ? new Date(
+          dueDate.getFullYear(),
+          dueDate.getMonth(),
+          dueDate.getDate(),
+          23,
+          59,
+          59,
+          999
+        ).toISOString()
       : undefined;
 
     if (isEditing && taskId) {
@@ -85,13 +98,16 @@ export const AddTaskScreen: React.FC<AddTaskScreenProps> = ({
     navigation.goBack();
   }, [title, description, dueDate, isEditing, taskId, addTask, updateTask, navigation]);
 
-  const handleSetToday = useCallback(() => {
-    const today = new Date().toISOString().split('T')[0];
-    setDueDate(today);
+  const handleDateChange = useCallback((event: unknown, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (event && (event as { type?: string }).type === 'dismissed') return;
+    if (selectedDate) {
+      setDueDate(selectedDate);
+    }
   }, []);
 
   const handleClearDate = useCallback(() => {
-    setDueDate('');
+    setDueDate(undefined);
   }, []);
 
   const isFormValid = title.trim().length > 0;
@@ -158,59 +174,100 @@ export const AddTaskScreen: React.FC<AddTaskScreenProps> = ({
           <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
             Due Date (optional)
           </Text>
-          <View style={styles.dateRow}>
-            <TextInput
-              style={[
-                styles.input,
-                styles.dateInput,
-                {
-                  backgroundColor: theme.colors.card,
-                  borderColor: theme.colors.border,
-                  color: theme.colors.text,
-                },
-              ]}
-              value={dueDate}
-              onChangeText={setDueDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={theme.colors.placeholder}
-            />
+
+          {/* Date field — opens the native picker */}
+          <TouchableOpacity
+            style={[
+              styles.input,
+              styles.dateField,
+              {
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+              },
+            ]}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.dateFieldContent}>
+              <Calendar
+                color={dueDate ? theme.colors.text : theme.colors.placeholder}
+                size={18}
+              />
+              <Text
+                style={
+                  dueDate
+                    ? { color: theme.colors.text, fontSize: 16 }
+                    : { color: theme.colors.placeholder, fontSize: 16 }
+                }
+              >
+                {dueDate ? formatDate(dueDate) : 'Select a date'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {dueDate ? (
             <TouchableOpacity
               style={[
-                styles.dateButton,
-                { backgroundColor: theme.colors.primary },
+                styles.clearDateButton,
+                { backgroundColor: theme.colors.danger },
               ]}
-              onPress={handleSetToday}
+              onPress={handleClearDate}
               activeOpacity={0.8}
             >
               <Text
                 style={[
-                  styles.dateButtonText,
-                  { color: theme.colors.primaryText },
+                  styles.clearDateText,
+                  { color: theme.colors.dangerText },
                 ]}
               >
-                Today
+                Clear date
               </Text>
             </TouchableOpacity>
-            {dueDate ? (
+          ) : null}
+
+          {/* Android: the picker opens as a dialog when rendered */}
+          {showDatePicker && Platform.OS === 'android' ? (
+            <DateTimePicker
+              value={dueDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+            />
+          ) : null}
+
+          {/* iOS: render the picker inline with a Done button */}
+          {showDatePicker && Platform.OS === 'ios' ? (
+            <View
+              style={[
+                styles.iosPickerContainer,
+                { backgroundColor: theme.colors.card },
+              ]}
+            >
+              <DateTimePicker
+                value={dueDate || new Date()}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+              />
               <TouchableOpacity
                 style={[
-                  styles.dateButton,
-                  { backgroundColor: theme.colors.danger },
+                  styles.doneButton,
+                  { backgroundColor: theme.colors.primary },
                 ]}
-                onPress={handleClearDate}
+                onPress={() => setShowDatePicker(false)}
                 activeOpacity={0.8}
               >
                 <Text
                   style={[
-                    styles.dateButtonText,
-                    { color: theme.colors.dangerText },
+                    styles.doneButtonText,
+                    { color: theme.colors.primaryText },
                   ]}
                 >
-                  Clear
+                  Done
                 </Text>
               </TouchableOpacity>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -289,22 +346,40 @@ const styles = StyleSheet.create({
     height: 100,
     paddingTop: 12,
   },
-  dateRow: {
+  dateField: {
+    height: 52,
+    justifyContent: 'center',
+  },
+  dateFieldContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  dateInput: {
-    flex: 1,
-    height: 52,
-  },
-  dateButton: {
+  clearDateButton: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
     paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  clearDateText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  iosPickerContainer: {
+    marginTop: 12,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  doneButton: {
+    marginTop: 4,
+    paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 10,
   },
-  dateButtonText: {
-    fontSize: 13,
+  doneButtonText: {
+    fontSize: 15,
     fontWeight: '600',
   },
   footer: {

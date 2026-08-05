@@ -9,8 +9,8 @@ import {
   Animated,
   Easing,
   View,
-  Text,
 } from 'react-native';
+import { Mic, Circle, Loader2, AlertCircle } from 'lucide-react-native';
 import { Theme } from '../constants/theme';
 import { VoiceInputState } from '../hooks/useVoiceInput';
 
@@ -67,15 +67,15 @@ export const FAB: React.FC<FABProps> = ({ theme, onPress, voiceState }) => {
   const getIcon = () => {
     switch (voiceState) {
       case 'recording':
-        return '●';
+        return <Circle fill="#FFFFFF" size={20} />;
       case 'transcribing':
-        return '⋯';
+        return <Loader2 color="#FFFFFF" size={24} />;
       case 'processing':
-        return '⋯';
+        return <Loader2 color="#FFFFFF" size={24} />;
       case 'error':
-        return '!';
+        return <AlertCircle color="#FFFFFF" size={24} />;
       default:
-        return '🎤';
+        return <Mic color="#FFFFFF" size={24} />;
     }
   };
 
@@ -111,7 +111,7 @@ export const FAB: React.FC<FABProps> = ({ theme, onPress, voiceState }) => {
         activeOpacity={0.8}
         disabled={voiceState === 'requesting-permission'}
       >
-        <Text style={styles.icon}>{getIcon()}</Text>
+        {getIcon()}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -134,9 +134,5 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 24,
-    color: '#FFFFFF',
   },
 });

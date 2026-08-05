@@ -1,6 +1,7 @@
 /**
  * VoiceInputModal — full-screen modal shown during voice recording and
- * transcription. Displays the current state and any transcribed tasks.
+ * transcription. Displays the current state, live recording duration, a Stop
+ * button to finish & transcribe, and the tasks that were produced.
  */
 import React from 'react';
 import {
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { X, Square } from 'lucide-react-native';
 import { Theme } from '../constants/theme';
 import { VoiceInputState } from '../hooks/useVoiceInput';
 
@@ -20,6 +22,8 @@ interface VoiceInputModalProps {
   voiceState: VoiceInputState;
   error?: string;
   transcribedTasks: string[];
+  recordingDuration: number;
+  onStop: () => void;
   onCancel: () => void;
 }
 
@@ -29,6 +33,8 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
   voiceState,
   error,
   transcribedTasks,
+  recordingDuration,
+  onStop,
   onCancel,
 }) => {
   const getStateText = () => {
@@ -50,7 +56,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
 
   const getSubText = () => {
     if (voiceState === 'recording') {
-      return 'Tap the microphone and speak your tasks naturally';
+      return `Recording ${recordingDuration}s — tap Stop when you are done`;
     }
     if (voiceState === 'processing' && transcribedTasks.length > 0) {
       return `Found ${transcribedTasks.length} task(s)`;
@@ -63,6 +69,8 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
     voiceState === 'transcribing' ||
     voiceState === 'processing';
 
+  const isRecording = voiceState === 'recording';
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
@@ -71,10 +79,8 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
             <Text style={[styles.title, { color: theme.colors.text }]}>
               Voice Input
             </Text>
-            <TouchableOpacity onPress={onCancel} hitSlop={10}>
-              <Text style={[styles.closeButton, { color: theme.colors.textSecondary }]}>
-                ✕
-              </Text>
+            <TouchableOpacity onPress={onCancel} hitSlop={10} disabled={showSpinner}>
+              <X color={theme.colors.textSecondary} size={20} />
             </TouchableOpacity>
           </View>
 
@@ -114,6 +120,44 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
                 ))}
               </View>
             ) : null}
+
+            {/* Stop button — finish recording and transcribe */}
+            {isRecording ? (
+              <TouchableOpacity
+                style={[
+                  styles.stopButton,
+                  styles.stopButtonContent,
+                  { backgroundColor: theme.colors.danger },
+                ]}
+                onPress={onStop}
+                activeOpacity={0.8}
+              >
+                <Square
+                  color={theme.colors.dangerText}
+                  size={16}
+                  fill={theme.colors.dangerText}
+                />
+                <Text
+                  style={[styles.stopButtonText, { color: theme.colors.dangerText }]}
+                >
+                  Stop & Add Tasks
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {voiceState === 'error' ? (
+              <TouchableOpacity
+                style={[styles.stopButton, { backgroundColor: theme.colors.primary }]}
+                onPress={onCancel}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[styles.stopButtonText, { color: theme.colors.primaryText }]}
+                >
+                  Close
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
       </View>
@@ -148,9 +192,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  closeButton: {
-    fontSize: 20,
-  },
   content: {
     alignItems: 'center',
   },
@@ -171,6 +212,7 @@ const styles = StyleSheet.create({
   tasksContainer: {
     width: '100%',
     marginTop: 8,
+    marginBottom: 8,
   },
   taskPreview: {
     padding: 12,
@@ -179,5 +221,21 @@ const styles = StyleSheet.create({
   },
   taskPreviewText: {
     fontSize: 14,
+  },
+  stopButton: {
+    marginTop: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 24,
+    alignItems: 'center',
+  },
+  stopButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stopButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

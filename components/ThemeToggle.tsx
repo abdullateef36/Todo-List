@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { Moon, Sun } from 'lucide-react-native';
 import { Theme } from '../constants/theme';
 import { ThemeMode } from '../constants/theme';
 
@@ -42,9 +43,13 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, mode, onToggle 
       onPress={onToggle}
       activeOpacity={0.7}
     >
-      <Animated.Text style={{ fontSize: 20, transform: [{ rotate: rotateInterpolate }] }}>
-        {mode === 'light' ? '🌙' : '☀️'}
-      </Animated.Text>
+      <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+        {mode === 'light' ? (
+          <Moon color={theme.colors.text} size={20} />
+        ) : (
+          <Sun color={theme.colors.text} size={20} />
+        )}
+      </Animated.View>
       <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
         {mode === 'light' ? 'Dark' : 'Light'}
       </Text>

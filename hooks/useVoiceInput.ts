@@ -1,10 +1,17 @@
 /**
  * Hook for voice input recording and transcription.
- * Records audio, transcribes via the Groq (Whisper) API, and splits into tasks.
+ * Records audio with expo-audio, transcribes via the Groq (Whisper) API,
+ * and splits the transcript into separate tasks.
  */
-import { useState, useCallback, useRef } from 'react';
-import { Audio } from 'expo-av';
+import { useState, useCallback } from 'react';
 import * as FileSystem from 'expo-file-system';
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import { transcribeAudio, splitTextWithGPT } from '../utils/groq';
 import { splitTranscribedTextIntoTasks, cleanTaskTitle } from '../utils/voiceUtils';
 import { DEFAULT_GROQ_API_KEY } from '../constants/config';
@@ -25,18 +32,11 @@ export interface VoiceInputResult {
 export const useVoiceInput = () => {
   const [state, setState] = useState<VoiceInputState>('idle');
   const [error, setError] = useState<string | undefined>(undefined);
-  const recordingRef = useRef<Audio.Recording | null>(null);
 
-  const cleanupRecording = async () => {
-    if (recordingRef.current) {
-      try {
-        await recordingRef.current.stopAndUnloadAsync();
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-      recordingRef.current = null;
-    }
-  };
+  // The recorder instance is owned by expo-audio and reused across recordings.
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  // Live recorder state (isRecording, duration) for UI feedback.
+  const recorderState = useAudioRecorderState(recorder);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
     setState('requesting-permission');
@@ -44,30 +44,23 @@ export const useVoiceInput = () => {
 
     try {
       // Request audio recording permissions
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
         setError('Microphone permission is required for voice input.');
         setState('error');
         return false;
       }
 
-      // Configure audio mode
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        interruptionModeIOS: 1, // DoNotMix
-        interruptionModeAndroid: 1, // DoNotMix
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+      // Configure audio session for recording
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      // Start recording
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      // Start a new recording
+      await recorder.prepareToRecordAsync();
+      recorder.record();
 
-      recordingRef.current = recording;
       setState('recording');
       return true;
     } catch (err) {
@@ -76,22 +69,16 @@ export const useVoiceInput = () => {
       setState('error');
       return false;
     }
-  }, []);
+  }, [recorder]);
 
   const stopRecordingAndTranscribe = useCallback(async (): Promise<VoiceInputResult> => {
     setState('transcribing');
     setError(undefined);
 
     try {
-      const recording = recordingRef.current;
-      if (!recording) {
-        throw new Error('No active recording');
-      }
-
       // Stop recording and get the URI
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      recordingRef.current = null;
+      await recorder.stop();
+      const uri = recorder.uri;
 
       if (!uri) {
         throw new Error('Failed to get recording URI');
@@ -113,7 +100,7 @@ export const useVoiceInput = () => {
 
       setState('processing');
 
-      // Try GPT-based splitting first, fall back to heuristic
+      // Try LLM-based splitting first, fall back to heuristics
       let taskTitles: string[] = [];
       try {
         taskTitles = await splitTextWithGPT(transcription.text, apiKey);
@@ -145,13 +132,17 @@ export const useVoiceInput = () => {
       setState('error');
       return { tasks: [], error: message };
     }
-  }, []);
+  }, [recorder]);
 
   const cancelRecording = useCallback(async () => {
-    await cleanupRecording();
+    try {
+      await recorder.stop();
+    } catch {
+      // Ignore cleanup errors (e.g. no active recording)
+    }
     setState('idle');
     setError(undefined);
-  }, []);
+  }, [recorder]);
 
   const reset = useCallback(() => {
     setState('idle');
@@ -161,6 +152,8 @@ export const useVoiceInput = () => {
   return {
     state,
     error,
+    isRecording: recorderState.isRecording,
+    recordingDuration: Math.floor(recorderState.durationMillis / 1000),
     startRecording,
     stopRecordingAndTranscribe,
     cancelRecording,

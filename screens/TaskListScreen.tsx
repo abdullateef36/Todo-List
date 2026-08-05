@@ -11,9 +11,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { Plus } from 'lucide-react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
-import { useTasks } from '../hooks/useTasks';
+import { useTasksContext } from '../context/TaskContext';
 import { useThemeContext } from '../context/ThemeContext';
 import { SearchBar } from '../components/SearchBar';
 import { TaskItem } from '../components/TaskItem';
@@ -43,11 +44,12 @@ export const TaskListScreen: React.FC<TaskListScreenProps> = ({ navigation }) =>
     toggleTask,
     deleteTask,
     clearCompleted,
-  } = useTasks();
+  } = useTasksContext();
   const { theme, mode, toggleTheme } = useThemeContext();
   const {
     state: voiceState,
     error: voiceError,
+    recordingDuration,
     startRecording,
     stopRecordingAndTranscribe,
     cancelRecording,
@@ -101,20 +103,24 @@ export const TaskListScreen: React.FC<TaskListScreenProps> = ({ navigation }) =>
     }
   }, [voiceState, reset, startRecording]);
 
-  // Modal close: stop recording if active, otherwise cancel
-  const handleVoiceModalClose = useCallback(async () => {
-    if (voiceState === 'recording') {
-      const result = await stopRecordingAndTranscribe();
-      if (result.tasks.length > 0) {
-        setTranscribedTasks(result.tasks);
-      }
-      // If error, modal stays open and shows the error
-    } else {
-      cancelRecording();
-      setVoiceModalVisible(false);
-      setTranscribedTasks([]);
+  // Modal close: cancel the current recording/flow and close
+  const handleVoiceModalCancel = useCallback(() => {
+    cancelRecording();
+    setVoiceModalVisible(false);
+    setTranscribedTasks([]);
+  }, [cancelRecording]);
+
+  // Stop recording and transcribe the audio into tasks
+  const handleVoiceModalStop = useCallback(async () => {
+    if (voiceState === 'transcribing' || voiceState === 'processing') {
+      return;
     }
-  }, [voiceState, stopRecordingAndTranscribe, cancelRecording]);
+    const result = await stopRecordingAndTranscribe();
+    if (result.tasks.length > 0) {
+      setTranscribedTasks(result.tasks);
+    }
+    // On error, the modal stays open and shows the error message
+  }, [voiceState, stopRecordingAndTranscribe]);
 
   // Delete with confirmation
   const handleDelete = useCallback(
@@ -195,11 +201,7 @@ export const TaskListScreen: React.FC<TaskListScreenProps> = ({ navigation }) =>
             onPress={() => navigation.navigate('AddTask', {})}
             activeOpacity={0.8}
           >
-            <Text
-              style={[styles.addButtonText, { color: theme.colors.primaryText }]}
-            >
-              +
-            </Text>
+            <Plus color={theme.colors.primaryText} size={22} />
           </TouchableOpacity>
         </View>
       </View>
@@ -279,7 +281,9 @@ export const TaskListScreen: React.FC<TaskListScreenProps> = ({ navigation }) =>
         voiceState={voiceState}
         error={voiceError}
         transcribedTasks={transcribedTasks}
-        onCancel={handleVoiceModalClose}
+        recordingDuration={recordingDuration}
+        onStop={handleVoiceModalStop}
+        onCancel={handleVoiceModalCancel}
       />
     </View>
   );
@@ -315,11 +319,6 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     fontSize: 18,
-  },
-  addButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    lineHeight: 24,
   },
   filterRow: {
     flexDirection: 'row',

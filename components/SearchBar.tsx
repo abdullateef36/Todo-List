@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
+import { Search } from 'lucide-react-native';
 import { Theme } from '../constants/theme';
 
 interface SearchBarProps {
@@ -28,6 +29,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         },
       ]}
     >
+      <Search color={theme.colors.placeholder} size={18} />
       <TextInput
         style={[styles.input, { color: theme.colors.text }]}
         value={value}
@@ -49,10 +51,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 16,
     height: 48,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   input: {
     fontSize: 15,
+    flex: 1,
     height: '100%',
   },
 });

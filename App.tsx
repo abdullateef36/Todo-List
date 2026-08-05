@@ -10,6 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider, useThemeContext } from './context/ThemeContext';
+import { TasksProvider } from './context/TaskContext';
 import { TaskListScreen } from './screens/TaskListScreen';
 import { AddTaskScreen } from './screens/AddTaskScreen';
 
@@ -61,7 +62,9 @@ const AppNavigator: React.FC = () => {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppNavigator />
+      <TasksProvider>
+        <AppNavigator />
+      </TasksProvider>
     </ThemeProvider>
   );
 }

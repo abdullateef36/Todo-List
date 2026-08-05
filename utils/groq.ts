@@ -5,6 +5,7 @@
  * Registry: https://console.groq.com/docs/speech-to-text
  */
 import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const WHISPER_ENDPOINT = `${GROQ_BASE_URL}/audio/transcriptions`;
@@ -34,37 +35,78 @@ export const transcribeAudio = async (
   apiKey: string
 ): Promise<TranscriptionResult> => {
   try {
-    // Read the audio file as base64 (unused fallback check for existence)
-    const fileInfo = await FileSystem.getInfoAsync(audioUri);
-    if (!fileInfo.exists) {
-      return { text: '', success: false, error: 'Audio file not found' };
+    // Verify the audio file exists (skip on web, where file metadata is limited)
+    if (Platform.OS !== 'web') {
+      const fileInfo = await FileSystem.getInfoAsync(audioUri);
+      if (!fileInfo.exists) {
+        return { text: '', success: false, error: 'Audio file not found' };
+      }
     }
 
-    // Create form data for the Whisper API
-    const formData = new FormData();
-    // @ts-ignore - FormData file attachment for React Native
-    formData.append('file', {
-      uri: audioUri,
-      type: 'audio/m4a',
-      name: 'recording.m4a',
-    });
-    formData.append('model', STT_MODEL);
+    if (Platform.OS === 'web') {
+      // Web: the URI is a blob: URL from MediaRecorder. Fetch it and append
+      // a real Blob to FormData. This works because the browser's fetch sets
+      // the correct Content-Type for blob: URLs, so response.blob() has the
+      // right MIME type.
+      const response = await fetch(audioUri);
+      const blob = await response.blob();
+      const formData = new FormData();
+      formData.append('file', blob, 'recording.m4a');
+      formData.append('model', STT_MODEL);
 
-    const response = await fetch(WHISPER_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: formData,
-    });
+      const apiResponse = await fetch(WHISPER_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: formData,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error?.message || `HTTP ${apiResponse.status}`;
+        return { text: '', success: false, error: errorMessage };
+      }
+
+      const data = await apiResponse.json();
+      return { text: data.text || '', success: true };
+    }
+
+    // Native / Expo Go: use FileSystem.uploadAsync which handles
+    // multipart/form-data natively and sets the audio MIME type correctly.
+    // This avoids the "Unsupported FormDataPart implementation" error that
+    // occurs when appending { uri, type, name } objects to FormData in Expo Go.
+    const uploadResult = await FileSystem.uploadAsync(
+      WHISPER_ENDPOINT,
+      audioUri,
+      {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType: 'audio/m4a',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        parameters: {
+          model: STT_MODEL,
+        },
+      }
+    );
+
+    if (uploadResult.status !== 200) {
+      let errorMessage: string;
+      try {
+        const errorData = JSON.parse(uploadResult.body);
+        errorMessage =
+          errorData.error?.message || `HTTP ${uploadResult.status}`;
+      } catch {
+        errorMessage = `HTTP ${uploadResult.status}`;
+      }
       return { text: '', success: false, error: errorMessage };
     }
 
-    const data = await response.json();
+    const data = JSON.parse(uploadResult.body);
     return { text: data.text || '', success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
